@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscaminas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #game {
+            display: inline-grid;
+            padding: 10px;
+            background-color: #ccc;
+            border: 2px solid #999;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #ddd;
+        }
+        .revealed {
+            background-color: #fff;
+        }
+        .mine {
+            background-color: #f00;
+        }
+    </style>
+</head>
+<body>
+    <div id="game"></div>
+    <script>
+        const ROWS = 10;
+        const COLS = 10;
+        const MINES = 15;
+
+        let board = [];
+        let revealed = [];
+        let gameOver = false;
+
+        function createBoard() {
+            for (let i = 0; i < ROWS; i++) {
+                board[i] = [];
+                revealed[i] = [];
+                for (let j = 0; j < COLS; j++) {
+                    board[i][j] = 0;
+                    revealed[i][j] = false;
+                }
+            }
+
+            // Place mines
+            let minesPlaced = 0;
+            while (minesPlaced < MINES) {
+                const row = Math.floor(Math.random() * ROWS);
+                const col = Math.floor(Math.random() * COLS);
+                if (board[row][col] !== -1) {
+                    board[row][col] = -1;
+                    minesPlaced++;
+                }
+            }
+
+            // Calculate numbers
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    if (board[i][j] !== -1) {
+                        board[i][j] = countAdjacentMines(i, j);
+                    }
+                }
+            }
+        }
+
+        function countAdjacentMines(row, col) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    if (newRow >= 0 && newRow < ROWS && newCol >= 0 && newCol < COLS) {
+                        if (board[newRow][newCol] === -1) count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function revealCell(row, col) {
+            if (row < 0 || row >= ROWS || col < 0 || col >= COLS || revealed[row][col]) return;
+            revealed[row][col] = true;
+            const cell = document.getElementById(`cell-${row}-${col}`);
+            cell.classList.add('revealed');
+
+            if (board[row][col] === -1) {
+                gameOver = true;
+                cell.classList.add('mine');
+                cell.textContent = '💣';
+                alert('¡Has perdido!');
+                revealAllMines();
+            } else if (board[row][col] === 0) {
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        revealCell(row + i, col + j);
+                    }
+                }
+            } else {
+                cell.textContent = board[row][col];
+            }
+
+            checkWin();
+        }
+
+        function revealAllMines() {
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    if (board[i][j] === -1) {
+                        const cell = document.getElementById(`cell-${i}-${j}`);
+                        cell.classList.add('revealed', 'mine');
+                        cell.textContent = '💣';
+                    }
+                }
+            }
+        }
+
+        function checkWin() {
+            let unrevealedSafeCells = 0;
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    if (!revealed[i][j] && board[i][j] !== -1) {
+                        unrevealedSafeCells++;
+                    }
+                }
+            }
+            if (unrevealedSafeCells === 0) {
+                alert('¡Has ganado!');
+                gameOver = true;
+            }
+        }
+
+        function createGameBoard() {
+            const gameDiv = document.getElementById('game');
+            gameDiv.style.gridTemplateColumns = `repeat(${COLS}, 30px)`;
+            
+            for (let i = 0; i < ROWS; i++) {
+                for (let j = 0; j < COLS; j++) {
+                    const cell = document.createElement('div');
+                    cell.id = `cell-${i}-${j}`;
+                    cell.className = 'cell';
+                    cell.addEventListener('click', () => {
+                        if (!gameOver) revealCell(i, j);
+                    });
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        if (!gameOver && !revealed[i][j]) {
+                            cell.textContent = cell.textContent === '🚩' ? '' : '🚩';
+                        }
+                    });
+                    gameDiv.appendChild(cell);
+                }
+            }
+        }
+
+        createBoard();
+        createGameBoard();
+    </script>
+</body>
+</html>
